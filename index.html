@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Volatile AI Chat</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <meta name="theme-color" content="#ffffff">
     <link rel="stylesheet" href="style.css">
     <script type="importmap">
         {
@@ -21,7 +25,7 @@
             <h1>Volatile AI</h1>
             <div id="status">Status: Initializing...</div>
             <div id="memory-status-container">
-                Memory: 
+                LTM Cache: 
                 <div id="memory-bar-container">
                     <div id="memory-bar"></div>
                 </div>
@@ -31,15 +35,16 @@
         <div id="chat-window">
             <!-- Messages will be injected here -->
         </div>
-        <form id="input-form">
-            <input type="text" id="user-input" placeholder="Type your message..." autocomplete="off" disabled>
-            <button type="submit" disabled>Send</button>
+        <form id="input-form" aria-label="Chat input">
+            <input type="text" id="user-input" placeholder="Type your message..." autocomplete="on" inputmode="text" enterkeyhint="send" disabled>
+            <button type="submit" aria-label="Send message" disabled>Send</button>
         </form>
     </div>
     <div id="loading-overlay" class="hidden">
         <div id="loading-animation"></div>
         <p>Establishing volatile connection...</p>
     </div>
+    <audio id="tts-audio" style="display: none;"></audio>
     <script type="module" src="main.js"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
