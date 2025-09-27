@@ -175,20 +175,17 @@ async function initializeChat() {
         // Post the initial AI system message (welcome/status) using memory context
         const initialGreeting = await chatManager.getInitialGreeting();
         const aiMessageElement = appendMessage('AI', '...');
+        
+        // streamResponse will handle enabling inputs when done
         await streamResponse(initialGreeting, aiMessageElement);
         
         isReady = true;
-        statusElement.textContent = 'Status: Awaiting input';
-        userInput.disabled = false;
-        sendButton.disabled = false;
-        userInput.focus();
         
     } catch (e) {
         console.error("Error initializing ChatManager:", e);
-        statusElement.textContent = 'Status: Initialization failed. Core error.';
-        // Ensure input stays disabled if initialization fails
-        userInput.disabled = true;
-        sendButton.disabled = true;
+        statusElement.textContent = 'Status: Critical failure, connection lost. Please reload to try again.';
+        // Inputs remain disabled as set in HTML/streamResponse cleanup failure
+        isReady = false;
     }
 }
 
@@ -222,25 +219,31 @@ async function streamResponse(fullResponse, messageElement) {
     let currentText = '';
     const words = fullResponse.split(/(\s+)/); // Split by whitespace but keep the delimiter
 
-    for (const word of words) {
-        currentText += word;
-        messageElement.textContent = currentText;
-        chatWindow.scrollTop = chatWindow.scrollHeight;
+    try {
+        for (const word of words) {
+            currentText += word;
+            messageElement.textContent = currentText;
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+            
+            // Adjust typing speed slightly for effect (e.g., 50ms per word part)
+            await new Promise(resolve => setTimeout(resolve, Math.random() * 50 + 20));
+        }
+    } catch (e) {
+        console.error("Error during response streaming:", e);
+        // Show truncated message on streaming failure
+        messageElement.textContent = currentText + '... [Transmission Fragmented]'; 
+    } finally {
+        isTyping = false;
+        statusElement.textContent = 'Status: Awaiting input';
+        userInput.disabled = false;
+        sendButton.disabled = false;
+        userInput.focus();
         
-        // Adjust typing speed slightly for effect (e.g., 50ms per word part)
-        await new Promise(resolve => setTimeout(resolve, Math.random() * 50 + 20));
+        // Update memory UI after AI finishes and starts consolidation
+        // We poll this briefly since consolidation is async
+        setTimeout(updateMemoryUI, 500); 
+        setTimeout(updateMemoryUI, 1500); 
     }
-    
-    isTyping = false;
-    statusElement.textContent = 'Status: Awaiting input';
-    userInput.disabled = false;
-    sendButton.disabled = false;
-    userInput.focus();
-    
-    // Update memory UI after AI finishes and starts consolidation
-    // We poll this briefly since consolidation is async
-    setTimeout(updateMemoryUI, 500); 
-    setTimeout(updateMemoryUI, 1500); 
 }
 
 async function handleUserSubmit(event) {
