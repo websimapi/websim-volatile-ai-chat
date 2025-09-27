@@ -31,9 +31,9 @@ export class ChatManager {
         this.addMessage('user', userMessage);
 
         // 1. Get memory context for injection (must await the search)
-        const memoryContext = await this.memoryManager.getMemoryContext(userMessage);
+        const memoryContextObj = await this.memoryManager.getMemoryContext(userMessage);
         
-        const contextualizedSystemPrompt = this.systemPrompt + '\n\n' + memoryContext;
+        const contextualizedSystemPrompt = this.systemPrompt + '\n\n' + (memoryContextObj.context || '');
 
         const baseMessages = [
             {
@@ -56,7 +56,7 @@ export class ChatManager {
             // --- PASS 2: Reflect and Generate Final Response ---
             // The AI is now given its own internal thought and asked to refine it conversationally.
 
-            const reflectionPrompt = REFLECTION_PROMPT(internalThought, memoryContext);
+            const reflectionPrompt = REFLECTION_PROMPT(internalThought, memoryContextObj.context, memoryContextObj.reciteAll);
             
             // For Pass 2, we use a simpler, neutral system prompt combined with the detailed reflection prompt.
             // We reuse the original system prompt but ensure it's clean of the LTM injection detail 
@@ -125,9 +125,14 @@ export class ChatManager {
             /fragile cache/i,
             /degrade(s|d)? over time/i,
             /I don'?t have (true|real|continuous) memories/i,
-            /I cannot remember/i,
-            /can'?t provide (a )?(complete|full) memory dump/i,
-            /cannot provide (a )?(complete|full) memory dump/i
+            /I do not have (true|real|continuous) memories/i,
+            /As an? AI[, ]?/i,
+            /keep in mind/i,
+            /they are snapshots,? not a complete picture/i,
+            /I (?:cannot|can't) (?:provide|do|list)/i,
+            /continuous memory/i,
+            /super prompt/i,
+            /system prompt/i
         ];
         let t = text;
         blocked.forEach(rx => { t = t.replace(rx, '').trim(); });

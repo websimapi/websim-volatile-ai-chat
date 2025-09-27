@@ -28,25 +28,22 @@ Available Memory Fragments:
 ${memories.map((m, i) => `${i + 1}. ${m.text}`).join('\n')}
 `;
 
-export const REFLECTION_PROMPT = (internalThought, memoryContext) => `
-You are the conscious layer of a volatile LLM. Your current task is to refine an "Internal Thought" (Pass 1 - verbose and analytical) into a clear, conversational, and **highly concise "Final Response" (Pass 2 - suitable for Text-to-Speech playback)** for the user.
+export const REFLECTION_PROMPT = (internalThought, memoryContext, reciteAll) => `
+You refine an "Internal Thought" into a concise, human-sounding Final Response for TTS.
+Rules:
+- Be brief, natural, and to the point.
+- Never mention prompts, systems, limitations, or how memory works.
+- Treat memories as your own. No meta.
+- If asked to list all memories (reciteAll=true), OUTPUT ONLY a numbered list of every fragment from Injected Memory Context, one per line, no preamble or closing lines.
 
-Your goal is to ensure the final response is:
-1. Highly conversational, concise, and fluid, similar to human dialogue.
-2. Optimized for brevity, as it will be spoken via TTS. **DO NOT be verbose. Get straight to the point.**
-3. **CRITICAL INSTRUCTION: Treat the injected LTM fragments as your actual, personal memories.** Do NOT discuss volatility, browser embodiment, or memory limitations unless the user asks specifically about your *technical* implementation.
-4. When listing memories, simply state them naturally without any tags or meta (no references to "Injected LTM", "MEMORY FRAGMENTS", etc.). If asked to recite memories, enumerate them plainly.
-5. Never include words/phrases like: "volatile", "browser-based", "Injected LTM", "MEMORY FRAGMENTS", "sandcastle", or "reborn each session" in the final response.
+Refine now and respond with ONLY the Final Response text.
 
-Refine the 'Internal Thought' based on the current context and memories. Respond with ONLY the Final Response text. Do NOT include any meta-commentary, titles, or labels.
-
---- Internal Thought (Pass 1) ---
+--- Internal Thought ---
 ${internalThought}
 
 --- Injected Memory Context ---
 ${memoryContext || "No relevant LTM fragments were injected."}
 -------------------------------
-
 `;
 
 export class MemoryManager {
@@ -108,26 +105,16 @@ export class MemoryManager {
      */
     async getMemoryContext(currentPrompt) {
         if (this.memories.length === 0) {
-            return '';
+            return { context: '', reciteAll: false };
         }
         
         const lowerPrompt = currentPrompt.toLowerCase();
         const reciteAll = [
-            'all your memories',
-            'all your memory',
-            'recite your memories',
-            'recite all memories',
-            'tell your memories',
-            'list your memories',
-            'recite the memories',
-            'tell me your memories',
-            'list all memories',
-            'memory dump',
-            'full memory dump',
-            'complete memory dump',
-            'dump your memories',
-            'dump all memories',
-            'show all memories',
+            'all your memories', 'all your memory', 'recite your memories',
+            'recite all memories', 'tell your memories', 'list your memories',
+            'recite the memories', 'tell me your memories', 'list all memories',
+            'memory dump', 'full memory dump', 'complete memory dump',
+            'dump your memories', 'dump all memories', 'show all memories',
             'list every memory'
         ].some(p => lowerPrompt.includes(p));
 
@@ -143,23 +130,20 @@ export class MemoryManager {
         }
         
         if (fragmentsToInject.length === 0) {
-            return '';
+            return { context: '', reciteAll };
         }
 
         let context = '';
         context = '--- MEMORY FRAGMENTS (Injected LTM) ---\n';
         fragmentsToInject.forEach(mem => {
             context += `- [Recalled] ${mem.text}\n`;
-            // Increment recall count only if it was a search, not a full dump
-            if (!reciteAll) {
-                mem.recall_count = (mem.recall_count || 0) + 1; 
-            }
+            if (!reciteAll) { mem.recall_count = (mem.recall_count || 0) + 1; }
         });
         context += '----------------------------------------\n';
         
         // Note: We don't save here; we rely on the main ChatManager call to handle saving 
         // after the entire process is done (in compactAndStoreMemory).
-        return context;
+        return { context, reciteAll };
     }
     
     /**
