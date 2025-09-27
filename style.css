@@ -62,7 +62,7 @@ header h1 {
 #memory-bar {
     height: 100%;
     width: 0%;
-    background-color: #FFEB3B; /* Yellowish color to signify volatility/warning */
+    background-color: #f4d03f; /* Gold/Amber to signify critical external resource */
     transition: width 0.5s ease-out;
 }
 
