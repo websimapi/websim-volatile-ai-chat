@@ -58,9 +58,10 @@ export class ChatManager {
 
             const reflectionPrompt = REFLECTION_PROMPT(internalThought, memoryContext);
             
-            // For Pass 2, we use a slightly refined system prompt focused on conversational tone
-            const conversationalSystemPrompt = this.systemPrompt + `\n\n--- OUTPUT TONE MODIFIER ---
-The 'Final Response' must be highly conversational, concise, and fluid, similar to human dialogue. **It must be suitable for Text-to-Speech (TTS) output, meaning it should be spoken and therefore brief and direct. Prioritize answering the user's query directly and minimize discussion of your system constraints/memory mechanisms unless explicitly asked about them.** Avoid overly lengthy explanations or formal LLM structures. Maintain the volatile AI persona but prioritize readability and natural flow for the user.`;
+            // For Pass 2, we use a simpler, neutral system prompt combined with the detailed reflection prompt.
+            // We reuse the original system prompt but ensure it's clean of the LTM injection detail 
+            // since the LTM context is already present in the reflectionPrompt.
+            const pass2SystemPrompt = this.systemPrompt;
 
             const pass2Completion = await websim.chat.completions.create({
                 // Note: We use the base history for context, but inject the reflection prompt as the user query 
@@ -68,7 +69,7 @@ The 'Final Response' must be highly conversational, concise, and fluid, similar 
                 messages: [
                     {
                         role: "system",
-                        content: conversationalSystemPrompt, // Use modified system prompt
+                        content: pass2SystemPrompt, // Reuse the main system persona prompt
                     },
                     ...this.conversationHistory.slice(0, -1), // Everything up to the *last* user message
                     {
