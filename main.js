@@ -195,16 +195,42 @@ function initializeChat() {
 }
 
 
-function createMessageElement(sender, content) {
+function createMessageElement(sender, content, internalThought = null) {
     const div = document.createElement('div');
     div.classList.add('message');
     div.classList.add(sender === 'AI' ? 'ai-message' : 'user-message');
-    div.innerHTML = content;
+    
+    if (sender === 'AI' && internalThought) {
+        // Add thought container
+        const thoughtContainer = document.createElement('details');
+        thoughtContainer.classList.add('internal-thought');
+        
+        const summary = document.createElement('summary');
+        summary.textContent = 'Internal Thought (Pass 1)';
+        
+        const thoughtContent = document.createElement('p');
+        thoughtContent.textContent = internalThought;
+        
+        thoughtContainer.appendChild(summary);
+        thoughtContainer.appendChild(thoughtContent);
+        
+        div.appendChild(thoughtContainer);
+
+        // Main response content wrapper
+        const mainContent = document.createElement('p');
+        mainContent.classList.add('final-response-text');
+        mainContent.innerHTML = content;
+        div.appendChild(mainContent);
+        
+    } else {
+        div.innerHTML = content;
+    }
+    
     return div;
 }
 
-function appendMessage(sender, content, animate = true) {
-    const messageElement = createMessageElement(sender, content);
+function appendMessage(sender, content, animate = true, internalThought = null) {
+    const messageElement = createMessageElement(sender, content, internalThought);
     chatWindow.appendChild(messageElement);
     chatWindow.scrollTop = chatWindow.scrollHeight;
     return messageElement;
@@ -221,12 +247,15 @@ async function streamResponse(fullResponse, messageElement) {
     userInput.disabled = true;
     sendButton.disabled = true;
     
+    // Find the element where the streamed text should go (the .final-response-text p element)
+    const streamTarget = messageElement.querySelector('.final-response-text') || messageElement;
+
     let currentText = '';
     const words = fullResponse.split(/(\s+)/); // Split by whitespace but keep the delimiter
 
     for (const word of words) {
         currentText += word;
-        messageElement.textContent = currentText;
+        streamTarget.textContent = currentText;
         chatWindow.scrollTop = chatWindow.scrollHeight;
         
         // Adjust typing speed slightly for effect (e.g., 50ms per word part)
@@ -257,15 +286,30 @@ async function handleUserSubmit(event) {
     appendMessage('User', userText);
     userInput.value = '';
     
-    // 2. Prepare AI response space
-    const aiMessageElement = appendMessage('AI', '...');
+    // 2. Prepare AI response space - Initially show ellipsis placeholder
+    // We pass null for thought and empty string for content, as content will be streamed
+    const aiMessageElement = appendMessage('AI', '', true, 'Thinking...'); 
+    // Set the placeholder text for the main content
+    const streamTarget = aiMessageElement.querySelector('.final-response-text');
+    if (streamTarget) {
+        streamTarget.textContent = '...';
+    }
 
     try {
-        // 3. Get AI Response
-        const fullResponse = await chatManager.getAiResponse(userText);
+        // 3. Get AI Response (including internal thought)
+        const responseData = await chatManager.getAiResponse(userText);
+        const { internalThought, finalResponse } = responseData;
         
-        // 4. Stream response to UI
-        await streamResponse(fullResponse, aiMessageElement);
+        // Update the internal thought display immediately
+        const thoughtContentElement = aiMessageElement.querySelector('.internal-thought p');
+        const thoughtSummaryElement = aiMessageElement.querySelector('.internal-thought summary');
+        if (thoughtContentElement) {
+            thoughtContentElement.textContent = internalThought;
+            thoughtSummaryElement.textContent = 'Internal Thought (Pass 1)';
+        }
+
+        // 4. Stream final response to UI
+        await streamResponse(finalResponse, aiMessageElement);
         
     } catch (error) {
         console.error("AI communication error:", error);

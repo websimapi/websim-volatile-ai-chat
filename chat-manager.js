@@ -24,7 +24,7 @@ export class ChatManager {
     /**
      * Generates an AI response for the user's message.
      * @param {string} userMessage - The user's input message.
-     * @returns {Promise<string>} - The full AI response text.
+     * @returns {Promise<object>} - An object containing { internalThought, finalResponse }.
      */
     async getAiResponse(userMessage) {
         // Add user message to history before sending
@@ -40,6 +40,7 @@ export class ChatManager {
                 role: "system",
                 content: contextualizedSystemPrompt,
             },
+            // Only send recent conversation for Pass 1, let the prompt guide the output format
             ...this.conversationHistory
         ];
 
@@ -57,13 +58,17 @@ export class ChatManager {
 
             const reflectionPrompt = REFLECTION_PROMPT(internalThought, memoryContext);
             
+            // For Pass 2, we use a slightly refined system prompt focused on conversational tone
+            const conversationalSystemPrompt = this.systemPrompt + `\n\n--- OUTPUT TONE MODIFIER ---
+The 'Final Response' must be highly conversational, concise, and fluid, similar to human dialogue. Avoid overly lengthy explanations or formal LLM structures. Maintain the volatile AI persona but prioritize readability and natural flow for the user.`;
+
             const pass2Completion = await websim.chat.completions.create({
                 // Note: We use the base history for context, but inject the reflection prompt as the user query 
                 // in the second pass to trigger the refinement logic guided by the system prompt.
                 messages: [
                     {
                         role: "system",
-                        content: this.systemPrompt, // Re-inject core system prompt
+                        content: conversationalSystemPrompt, // Use modified system prompt
                     },
                     ...this.conversationHistory.slice(0, -1), // Everything up to the *last* user message
                     {
@@ -84,7 +89,7 @@ export class ChatManager {
             // Don't await this, let it run in the background
             this.memoryManager.compactAndStoreMemory(recentHistory).catch(console.error); 
             
-            return finalResponse;
+            return { internalThought, finalResponse }; // RETURN BOTH THOUGHT AND RESPONSE
 
         } catch (error) {
             console.error("LLM API call failed during one of the passes:", error);

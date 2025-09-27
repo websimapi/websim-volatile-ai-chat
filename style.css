@@ -82,18 +82,20 @@ header h1 {
 }
 
 .message {
-    padding: 10px 15px;
+    padding: 0; 
     border-radius: 18px;
     max-width: 80%;
     word-wrap: break-word;
     font-size: 0.9em;
     line-height: 1.4;
+    overflow: hidden; /* important for border radius */
 }
 
 .user-message {
     background-color: #DCF8C6;
     align-self: flex-end;
     border-bottom-right-radius: 2px;
+    padding: 10px 15px;
 }
 
 .ai-message {
@@ -101,6 +103,54 @@ header h1 {
     align-self: flex-start;
     border-bottom-left-radius: 2px;
     box-shadow: 0 1px 0.5px rgba(0, 0, 0, 0.13);
+    padding: 0;
+    border-radius: 18px;
+}
+
+.ai-message > *:not(.internal-thought) {
+    padding: 10px 15px; /* Apply padding to the main text/placeholder */
+}
+
+/* Ensure the main response text gets appropriate spacing if thought is present */
+.ai-message .final-response-text {
+    margin-top: 5px;
+    display: block; /* Ensure it takes its own line */
+}
+
+/* Styling for Internal Thought */
+.internal-thought {
+    font-size: 0.75em;
+    color: #555;
+    background-color: #f0f0f0;
+    border-radius: 8px;
+    padding: 0px 5px;
+    margin: -5px -5px 5px -5px; /* Pull into the message bubble slightly */
+    border-left: 3px solid #f4d03f; /* Memory color indicator */
+}
+
+.internal-thought summary {
+    font-weight: bold;
+    cursor: pointer;
+    padding: 5px 0;
+    list-style: none; /* Hide default arrow */
+    outline: none;
+}
+
+.internal-thought summary::-webkit-details-marker {
+    display: none;
+}
+
+.internal-thought[open] summary {
+    border-bottom: 1px solid #ddd;
+    margin-bottom: 5px;
+}
+
+.internal-thought p {
+    margin: 5px 0 5px 0;
+    padding: 0 5px;
+    white-space: pre-wrap; /* Preserve formatting of LLM output if needed */
+    font-style: italic;
+    color: #777;
 }
 
 #input-form {
