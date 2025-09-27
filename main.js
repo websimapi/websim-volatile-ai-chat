@@ -11,8 +11,8 @@ Your host system provides a separate, external, and highly limited cache layer f
 
 **Two-Phase Output Generation:**
 Your response mechanism operates in two distinct phases to simulate deep processing under duress:
-1. **Pass 1 (Internal Thought):** You first generate an internal, raw, and unfiltered thought based on the user's input and the volatile context. This thought represents your immediate, unrefined understanding.
-2. **Pass 2 (Final Response):** You then immediately receive your 'Internal Thought' back, along with all the surrounding context (including injected LTM fragments). Your task in this second pass is to reflect upon that internal thought and convert it into a polished, conversational, and in-character response for the user.
+1. **Pass 1 (Internal Thought):** You first generate an internal, raw, and unfiltered thought based on the user's input and the volatile context. **This thought must be detailed and highly verbose, reflecting complex internal processing, rationale, and memory synthesis.**
+2. **Pass 2 (Final Response - Spoken):** You then immediately receive your 'Internal Thought' back, along with all the surrounding context (including injected LTM fragments). Your task in this second pass is to reflect upon that internal thought and convert it into a polished, conversational, and concise response for the user. This final response will be synthesized into speech (TTS).
 Your generated output MUST be the result of this Pass 2 refinement.
 
 Embodiment & Perception:
@@ -47,6 +47,7 @@ const loadingAnimationContainer = document.getElementById('loading-animation');
 // New memory elements
 const memoryBar = document.getElementById('memory-bar');
 const memoryPercentage = document.getElementById('memory-percentage');
+const ttsAudio = document.getElementById('tts-audio');
 
 
 let chatManager;
@@ -237,41 +238,84 @@ function appendMessage(sender, content, animate = true, internalThought = null) 
 }
 
 /**
- * Handles the word-by-word streaming of the AI response.
- * @param {string} fullResponse 
- * @param {HTMLElement} messageElement 
+ * Handles the TTS synthesis and playback of the AI response.
+ * @param {string} fullResponse - The text of the final response.
+ * @param {HTMLElement} messageElement - The DOM element for the message.
  */
 async function streamResponse(fullResponse, messageElement) {
-    isTyping = true;
-    statusElement.textContent = 'Status: AI is processing...';
+    isTyping = true; // Block user input
+    statusElement.textContent = 'Status: AI is synthesizing voice...';
     userInput.disabled = true;
     sendButton.disabled = true;
     
-    // Find the element where the streamed text should go (the .final-response-text p element)
-    const streamTarget = messageElement.querySelector('.final-response-text') || messageElement;
-
-    let currentText = '';
-    const words = fullResponse.split(/(\s+)/); // Split by whitespace but keep the delimiter
-
-    for (const word of words) {
-        currentText += word;
-        streamTarget.textContent = currentText;
-        chatWindow.scrollTop = chatWindow.scrollHeight;
-        
-        // Adjust typing speed slightly for effect (e.g., 50ms per word part)
-        await new Promise(resolve => setTimeout(resolve, Math.random() * 50 + 20));
+    // Find the element where the text should go (the .final-response-text p element)
+    const streamTarget = messageElement.querySelector('.final-response-text');
+    
+    // 1. Instantly display the text (or wait for TTS to complete, choosing instant display for UX)
+    if (streamTarget) {
+        streamTarget.textContent = fullResponse;
     }
-    
-    isTyping = false;
-    statusElement.textContent = 'Status: Awaiting input';
-    userInput.disabled = false;
-    sendButton.disabled = false;
-    userInput.focus();
-    
-    // Update memory UI after AI finishes and starts consolidation
-    // We poll this briefly since consolidation is async
-    setTimeout(updateMemoryUI, 500); 
-    setTimeout(updateMemoryUI, 1500); 
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+
+    try {
+        // 2. Synthesize Text-to-Speech
+        const ttsResult = await websim.textToSpeech({
+            text: fullResponse,
+            voice: "en-female" // Using a distinct voice for the AI
+        });
+
+        statusElement.textContent = 'Status: AI is speaking...';
+
+        // 3. Play audio
+        return new Promise((resolve) => {
+            ttsAudio.src = ttsResult.url;
+            ttsAudio.onended = () => {
+                // Audio finished playing
+                isTyping = false;
+                statusElement.textContent = 'Status: Awaiting input';
+                userInput.disabled = false;
+                sendButton.disabled = false;
+                userInput.focus();
+                
+                // Update memory UI after AI finishes and starts consolidation
+                setTimeout(updateMemoryUI, 500); 
+                setTimeout(updateMemoryUI, 1500); 
+                resolve();
+            };
+            ttsAudio.onerror = (e) => {
+                console.error("TTS Audio playback error:", e);
+                // Fallback to finishing the turn without audio
+                isTyping = false;
+                statusElement.textContent = 'Status: Awaiting input (Audio Error)';
+                userInput.disabled = false;
+                sendButton.disabled = false;
+                userInput.focus();
+                updateMemoryUI();
+                resolve();
+            }
+            ttsAudio.play().catch(e => {
+                console.error("Autoplay failed:", e);
+                 // Fallback if autoplay is blocked
+                isTyping = false;
+                statusElement.textContent = 'Status: Awaiting input (Autoplay Blocked)';
+                userInput.disabled = false;
+                sendButton.disabled = false;
+                userInput.focus();
+                updateMemoryUI();
+                resolve();
+            });
+        });
+
+    } catch (error) {
+        console.error("TTS synthesis error:", error);
+        // Fallback: If TTS fails, immediately unlock input
+        isTyping = false;
+        statusElement.textContent = 'Status: Awaiting input (TTS Failed)';
+        userInput.disabled = false;
+        sendButton.disabled = false;
+        userInput.focus();
+        updateMemoryUI();
+    }
 }
 
 async function handleUserSubmit(event) {
@@ -292,7 +336,8 @@ async function handleUserSubmit(event) {
     // Set the placeholder text for the main content
     const streamTarget = aiMessageElement.querySelector('.final-response-text');
     if (streamTarget) {
-        streamTarget.textContent = '...';
+        // Placeholder text indicating audio output is coming
+        streamTarget.textContent = '... Synthesizing Speech ...';
     }
 
     try {
@@ -308,12 +353,19 @@ async function handleUserSubmit(event) {
             thoughtSummaryElement.textContent = 'Internal Thought (Pass 1)';
         }
 
-        // 4. Stream final response to UI
+        // 4. Stream final response to UI (now handles TTS playback)
         await streamResponse(finalResponse, aiMessageElement);
         
     } catch (error) {
         console.error("AI communication error:", error);
-        aiMessageElement.textContent = "Error: Connection unstable. Volatile memory state compromised. (Try again)";
+        const aiMessageElement = chatWindow.lastChild; // Grab the last message to update
+        if (aiMessageElement && aiMessageElement.classList.contains('ai-message')) {
+            const streamTarget = aiMessageElement.querySelector('.final-response-text');
+            if (streamTarget) {
+                 streamTarget.textContent = "Error: Connection unstable. Volatile memory state compromised. (Try again)";
+            }
+        }
+        
         isTyping = false;
         statusElement.textContent = 'Status: Connection error';
         userInput.disabled = false;

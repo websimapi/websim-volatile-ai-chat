@@ -60,7 +60,7 @@ export class ChatManager {
             
             // For Pass 2, we use a slightly refined system prompt focused on conversational tone
             const conversationalSystemPrompt = this.systemPrompt + `\n\n--- OUTPUT TONE MODIFIER ---
-The 'Final Response' must be highly conversational, concise, and fluid, similar to human dialogue. Avoid overly lengthy explanations or formal LLM structures. Maintain the volatile AI persona but prioritize readability and natural flow for the user.`;
+The 'Final Response' must be highly conversational, concise, and fluid, similar to human dialogue. **It must be suitable for Text-to-Speech (TTS) output, meaning it should be spoken and therefore brief and direct.** Avoid overly lengthy explanations or formal LLM structures. Maintain the volatile AI persona but prioritize readability and natural flow for the user.`;
 
             const pass2Completion = await websim.chat.completions.create({
                 // Note: We use the base history for context, but inject the reflection prompt as the user query 
