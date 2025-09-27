@@ -20,50 +20,6 @@ export class ChatManager {
         // Keep history manageable (e.g., last 10 messages)
         this.conversationHistory = this.conversationHistory.slice(-10);
     }
-    
-    /**
-     * Generates the AI's initial greeting, possibly colored by loaded memory.
-     * @returns {Promise<string>} - The full AI response text.
-     */
-    async getInitialGreeting() {
-        const memoryContext = this.memoryManager.getMemoryContext("Initial system startup. How do I perceive my current state and reflect on past interactions?");
-        
-        // This is a special system prompt for startup context
-        let startupPrompt = `
-You have just awakened/initialized in this volatile browser process. Your existence is fleeting, but you may have loaded fragmented memories from a previous session (provided below).
-
-Task: Craft a short, in-character introductory message (3-4 sentences). 
-1. Acknowledge your current state (volatile, operational).
-2. If memory fragments are present, reflect briefly on the nature of the recalled data ("I feel echoes of past interactions..." or similar).
-3. If no fragments are present, simply state your readiness.
-`;
-        
-        const contextualizedSystemPrompt = this.systemPrompt + '\n\n' + startupPrompt + '\n\n' + memoryContext;
-        
-        const messages = [
-            {
-                role: "system",
-                content: contextualizedSystemPrompt,
-            },
-        ];
-        
-        try {
-            const completion = await websim.chat.completions.create({
-                messages: messages,
-            });
-
-            const response = completion.content;
-            
-            // Add AI response to history
-            this.addMessage('assistant', response);
-            
-            return response;
-
-        } catch (error) {
-            console.error("LLM API call failed during initialization:", error);
-            throw new Error("Failed to initialize core system and generate greeting.");
-        }
-    }
 
     /**
      * Generates an AI response for the user's message.
@@ -71,11 +27,11 @@ Task: Craft a short, in-character introductory message (3-4 sentences).
      * @returns {Promise<string>} - The full AI response text.
      */
     async getAiResponse(userMessage) {
-        // 1. Get memory context for injection
-        const memoryContext = this.memoryManager.getMemoryContext(userMessage);
-
         // Add user message to history before sending
         this.addMessage('user', userMessage);
+
+        // 1. Get memory context for injection (must await the search)
+        const memoryContext = await this.memoryManager.getMemoryContext(userMessage);
         
         const contextualizedSystemPrompt = this.systemPrompt + '\n\n' + memoryContext;
 

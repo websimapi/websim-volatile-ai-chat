@@ -17,6 +17,17 @@ Respond directly with only the compact memory fragment text.
 Conversation history:
 `;
 
+const MEMORY_SEARCH_PROMPT = (query, memories) => `
+You are the memory retrieval system for an LLM with volatile memory.
+Your task is to select up to 5 memory fragments from the list below that are most relevant to the user's current query.
+List the index numbers (1-based) of the relevant fragments, separated by commas, and nothing else. If no fragments are relevant, output "NONE".
+
+Current Query: "${query}"
+
+Available Memory Fragments:
+${memories.map((m, i) => `${i + 1}. ${m.text}`).join('\n')}
+`;
+
 export class MemoryManager {
     constructor() {
         this.memories = this._loadMemories();
@@ -63,26 +74,82 @@ export class MemoryManager {
 
     /**
      * Retrieves the top relevant/recent memories to be injected into the LLM context.
-     * For simplicity, this currently returns the 5 most recent memories.
-     * @param {string} currentPrompt - The user's latest input (not used for search yet, but reserved for future semantic search).
+     * @param {string} currentPrompt - The user's latest input.
      * @returns {string} Context block of memory fragments.
      */
-    getMemoryContext(currentPrompt) {
-        // Sort by timestamp (most recent first) and then increment recall count for the top ones.
-        const sortedMemories = this.memories.sort((a, b) => b.timestamp - a.timestamp);
-        const topMemories = sortedMemories.slice(0, 5);
-
+    async getMemoryContext(currentPrompt) {
+        if (this.memories.length === 0) {
+            return '';
+        }
+        
+        // Use LLM to find the most relevant memories
+        const relevantMemories = await this._searchRelevantMemories(currentPrompt);
+        
         let context = '';
-        if (topMemories.length > 0) {
+        if (relevantMemories.length > 0) {
             context = '--- MEMORY FRAGMENTS (Injected LTM) ---\n';
-            topMemories.forEach(mem => {
+            relevantMemories.forEach(mem => {
                 context += `- [Recalled] ${mem.text}\n`;
-                mem.recall_count = (mem.recall_count || 0) + 1; // Increment recall count
+                // Increment recall count and save, but don't save every time as this is performance heavy. 
+                // We'll trust the periodic degradation/save cycle to handle this, 
+                // or ensure we save after the compact/store phase.
+                mem.recall_count = (mem.recall_count || 0) + 1; 
             });
             context += '----------------------------------------\n';
-            this._saveMemories(); // Save recall count updates
+            // Note: We don't save here; we rely on the main ChatManager call to handle saving 
+            // after the entire process is done (in compactAndStoreMemory).
         }
         return context;
+    }
+    
+    /**
+     * Uses the LLM to select the most relevant memories based on the user's query.
+     * @param {string} query - The user's current input.
+     * @returns {Promise<Array<object>>} - Array of relevant memory objects.
+     */
+    async _searchRelevantMemories(query) {
+        if (this.memories.length === 0) {
+            return [];
+        }
+
+        // Only send the text content to the LLM for searching
+        const prompt = MEMORY_SEARCH_PROMPT(query, this.memories);
+
+        try {
+            const completion = await websim.chat.completions.create({
+                messages: [
+                    { role: "user", content: prompt },
+                ],
+                max_tokens: 50, // Expect a very short response (e.g., "1, 4, 7")
+                temperature: 0.1 // Ensure deterministic/functional output
+            });
+
+            const response = completion.content.trim();
+            if (response.toUpperCase() === 'NONE' || !response) {
+                return [];
+            }
+
+            const indices = response.split(',')
+                .map(s => parseInt(s.trim()))
+                .filter(n => !isNaN(n) && n >= 1 && n <= this.memories.length);
+
+            // Select unique memories based on the indices provided by the LLM
+            const relevantMemories = [...new Set(indices)]
+                .map(index => this.memories[index - 1])
+                .filter(mem => mem); // Filter out any null/undefined results
+
+            // If the search failed or returned nothing, fall back to the 3 most recent memories
+            if (relevantMemories.length === 0) {
+                 return [...this.memories].sort((a, b) => b.timestamp - a.timestamp).slice(0, 3);
+            }
+
+            return relevantMemories;
+
+        } catch (error) {
+            console.warn("Memory search failed, falling back to recent memories:", error);
+            // Fallback: return the 3 most recent memories
+            return [...this.memories].sort((a, b) => b.timestamp - a.timestamp).slice(0, 3);
+        }
     }
 
     /**
