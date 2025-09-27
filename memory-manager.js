@@ -19,7 +19,7 @@ Conversation history:
 
 const MEMORY_SEARCH_PROMPT = (query, memories) => `
 You are the memory retrieval system for an LLM with volatile memory.
-Your task is to select up to 10 memory fragments from the list below that are most relevant to the user's current query.
+Your task is to select all memory fragments (maximum 10) from the list below that are highly relevant to the user's current query.
 List the index numbers (1-based) of the relevant fragments, separated by commas, and nothing else. If no fragments are relevant, output "NONE".
 
 Current Query: "${query}"
@@ -147,7 +147,8 @@ export class MemoryManager {
 
             const response = completion.content.trim();
             if (response.toUpperCase() === 'NONE' || !response) {
-                return [];
+                // Fallback: return the 5 most recent memories if search yields nothing
+                return [...this.memories].sort((a, b) => b.timestamp - a.timestamp).slice(0, 5);
             }
 
             const indices = response.split(',')
@@ -159,17 +160,17 @@ export class MemoryManager {
                 .map(index => this.memories[index - 1])
                 .filter(mem => mem); // Filter out any null/undefined results
 
-            // If the search failed or returned nothing, fall back to the 3 most recent memories
+            // If the search failed or returned nothing, fall back to the 5 most recent memories
             if (relevantMemories.length === 0) {
-                 return [...this.memories].sort((a, b) => b.timestamp - a.timestamp).slice(0, 3);
+                 return [...this.memories].sort((a, b) => b.timestamp - a.timestamp).slice(0, 5);
             }
 
             return relevantMemories;
 
         } catch (error) {
             console.warn("Memory search failed, falling back to recent memories:", error);
-            // Fallback: return the 3 most recent memories
-            return [...this.memories].sort((a, b) => b.timestamp - a.timestamp).slice(0, 3);
+            // Fallback: return the 5 most recent memories
+            return [...this.memories].sort((a, b) => b.timestamp - a.timestamp).slice(0, 5);
         }
     }
 
