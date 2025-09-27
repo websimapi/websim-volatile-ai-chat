@@ -115,7 +115,10 @@ export class MemoryManager {
             'recite the memories', 'tell me your memories', 'list all memories',
             'memory dump', 'full memory dump', 'complete memory dump',
             'dump your memories', 'dump all memories', 'show all memories',
-            'list every memory'
+            'list every memory', 'what are your memories', 'what do you remember',
+            'what you remember', 'what can you remember', 'tell me what you remember',
+            'list what you remember', 'what do u remember', 'your memories',
+            'list memories', 'tell memories', 'what do you recall', 'list recalls'
         ].some(p => lowerPrompt.includes(p));
 
         let fragmentsToInject;
