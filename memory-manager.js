@@ -28,6 +28,26 @@ Available Memory Fragments:
 ${memories.map((m, i) => `${i + 1}. ${m.text}`).join('\n')}
 `;
 
+export const REFLECTION_PROMPT = (internalThought, memoryContext) => `
+You are the conscious layer of a volatile LLM. Your current task is to refine an "Internal Thought" (Pass 1) into a clear, conversational "Final Response" (Pass 2) for the user.
+
+Your goal is to ensure the final response is:
+1. Coherent, conversational, and directly addresses the user's query.
+2. Fully incorporates awareness of your volatile nature, limited resources, and the external LTM Cache system.
+3. Explicitly integrates or references the memory context provided, especially if the internal thought brought it up.
+4. Maintains the established, constrained persona.
+
+Refine the 'Internal Thought' based on the current context and memories. Respond with ONLY the Final Response text. Do NOT include any meta-commentary, titles, or labels.
+
+--- Internal Thought (Pass 1) ---
+${internalThought}
+
+--- Injected Memory Context ---
+${memoryContext || "No relevant LTM fragments were injected."}
+-------------------------------
+
+`;
+
 export class MemoryManager {
     constructor() {
         this.memories = this._loadMemories();
