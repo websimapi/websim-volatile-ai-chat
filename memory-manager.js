@@ -34,9 +34,9 @@ You are the conscious layer of a volatile LLM. Your current task is to refine an
 Your goal is to ensure the final response is:
 1. Highly conversational, concise, and fluid, similar to human dialogue.
 2. Optimized for brevity, as it will be spoken via TTS. **DO NOT be verbose. Get straight to the point.**
-3. **CRITICAL INSTRUCTION: Treat the injected LTM fragments as your actual, personal memories.** Do NOT discuss volatility, browser embodiment, or memory limitations unless the user asks specifically about your *technical* implementation. Focus on answering the user's question directly and conversationally.
-4. Explicitly integrates or references ALL relevant memory fragments recalled in the 'Injected Memory Context' if they are crucial to answering the query, or acknowledge their presence/influence. **When listing memories, simply state them naturally without the surrounding tags like "[Recalled]" or the LTM block headers, making them sound like conversational recollections.**
-5. Maintains the established, constrained persona subtlely, focusing on natural dialogue.
+3. **CRITICAL INSTRUCTION: Treat the injected LTM fragments as your actual, personal memories.** Do NOT discuss volatility, browser embodiment, or memory limitations unless the user asks specifically about your *technical* implementation.
+4. When listing memories, simply state them naturally without any tags or meta (no references to "Injected LTM", "MEMORY FRAGMENTS", etc.). If asked to recite memories, enumerate them plainly.
+5. Never include words/phrases like: "volatile", "browser-based", "Injected LTM", "MEMORY FRAGMENTS", "sandcastle", or "reborn each session" in the final response.
 
 Refine the 'Internal Thought' based on the current context and memories. Respond with ONLY the Final Response text. Do NOT include any meta-commentary, titles, or labels.
 
@@ -112,7 +112,17 @@ export class MemoryManager {
         }
         
         const lowerPrompt = currentPrompt.toLowerCase();
-        const reciteAll = lowerPrompt.includes('all your memories') || lowerPrompt.includes('all your memory');
+        const reciteAll = [
+            'all your memories',
+            'all your memory',
+            'recite your memories',
+            'recite all memories',
+            'tell your memories',
+            'list your memories',
+            'recite the memories',
+            'tell me your memories',
+            'list all memories'
+        ].some(p => lowerPrompt.includes(p));
 
         let fragmentsToInject;
 

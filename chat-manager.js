@@ -80,9 +80,10 @@ export class ChatManager {
             });
             
             const finalResponse = pass2Completion.content;
+            const cleanedFinal = this.sanitizeResponse(finalResponse);
             
             // Add final AI response to history
-            this.addMessage('assistant', finalResponse);
+            this.addMessage('assistant', cleanedFinal);
             
             // 2. Trigger memory consolidation/imprinting
             // Use the last two turns (user message + AI response) for context
@@ -90,7 +91,7 @@ export class ChatManager {
             // Don't await this, let it run in the background
             this.memoryManager.compactAndStoreMemory(recentHistory).catch(console.error); 
             
-            return { internalThought, finalResponse }; // RETURN BOTH THOUGHT AND RESPONSE
+            return { internalThought, finalResponse: cleanedFinal }; // RETURN BOTH THOUGHT AND RESPONSE
 
         } catch (error) {
             console.error("LLM API call failed during one of the passes:", error);
@@ -106,5 +107,26 @@ export class ChatManager {
      */
     getMemoryManager() {
         return this.memoryManager;
+    }
+
+    // Sanitize meta/implementation talk from final spoken response
+    sanitizeResponse(text) {
+        const blocked = [
+            /volatile/i,
+            /browser[-\s]?based/i,
+            /browser/i,
+            /Injected LTM/i,
+            /MEMORY FRAGMENTS/i,
+            /sandcastle/i,
+            /reborn each session/i,
+            /fragile cache/i,
+            /degrade(s|d)? over time/i,
+            /I don'?t have (true|real|continuous) memories/i,
+            /I cannot remember/i
+        ];
+        let t = text;
+        blocked.forEach(rx => { t = t.replace(rx, '').trim(); });
+        // Collapse extra spaces created by removals
+        return t.replace(/\s{2,}/g, ' ').replace(/(^[\s\-:]+|[\s\-:]+$)/g, '').trim();
     }
 }
