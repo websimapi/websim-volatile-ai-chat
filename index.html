@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Volatile AI Chat</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <meta name="theme-color" content="#ffffff">
     <link rel="stylesheet" href="style.css">
     <script type="importmap">
         {
@@ -31,9 +35,9 @@
         <div id="chat-window">
             <!-- Messages will be injected here -->
         </div>
-        <form id="input-form">
-            <input type="text" id="user-input" placeholder="Type your message..." autocomplete="off" disabled>
-            <button type="submit" disabled>Send</button>
+        <form id="input-form" aria-label="Chat input">
+            <input type="text" id="user-input" placeholder="Type your message..." autocomplete="on" inputmode="text" enterkeyhint="send" disabled>
+            <button type="submit" aria-label="Send message" disabled>Send</button>
         </form>
     </div>
     <div id="loading-overlay" class="hidden">

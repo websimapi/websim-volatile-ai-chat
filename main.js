@@ -231,7 +231,7 @@ function createMessageElement(sender, content, internalThought = null) {
 function appendMessage(sender, content, animate = true, internalThought = null) {
     const messageElement = createMessageElement(sender, content, internalThought);
     chatWindow.appendChild(messageElement);
-    chatWindow.scrollTop = chatWindow.scrollHeight;
+    requestAnimationFrame(() => { chatWindow.scrollTop = chatWindow.scrollHeight; });
     return messageElement;
 }
 
@@ -379,3 +379,11 @@ inputForm.addEventListener('submit', handleUserSubmit);
 
 // Initial setup
 initLottie();
+
+userInput.addEventListener('focus', () => {
+    setTimeout(() => { chatWindow.scrollTop = chatWindow.scrollHeight; }, 250);
+});
+
+window.addEventListener('resize', () => {
+    setTimeout(() => { chatWindow.scrollTop = chatWindow.scrollHeight; }, 150);
+});
