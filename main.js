@@ -1,4 +1,6 @@
 import { ChatManager } from 'chat-manager';
+// Import memory manager for type reference, although ChatManager handles the instantiation
+import 'memory-manager'; 
 
 const SUPER_PROMPT = `
 System Role & Context:
@@ -31,6 +33,11 @@ const sendButton = inputForm.querySelector('button');
 const statusElement = document.getElementById('status');
 const loadingOverlay = document.getElementById('loading-overlay');
 const loadingAnimationContainer = document.getElementById('loading-animation');
+
+// New memory elements
+const memoryBar = document.getElementById('memory-bar');
+const memoryPercentage = document.getElementById('memory-percentage');
+
 
 let chatManager;
 let isTyping = false;
@@ -138,6 +145,24 @@ function initLottie() {
     });
 }
 
+function updateMemoryUI() {
+    if (chatManager) {
+        const memoryManager = chatManager.getMemoryManager();
+        const usage = memoryManager.getMemoryUsagePercentage();
+        memoryBar.style.width = `${usage}%`;
+        memoryPercentage.textContent = `${Math.round(usage)}%`;
+
+        // Change bar color based on usage stress
+        if (usage > 85) {
+            memoryBar.style.backgroundColor = '#F44336'; // Red
+        } else if (usage > 50) {
+            memoryBar.style.backgroundColor = '#FF9800'; // Orange
+        } else {
+            memoryBar.style.backgroundColor = '#4CAF50'; // Green
+        }
+    }
+}
+
 function initializeChat() {
     try {
         chatManager = new ChatManager(SUPER_PROMPT);
@@ -149,6 +174,9 @@ function initializeChat() {
         
         // Post the initial AI system message (welcome/status)
         appendMessage('AI', 'Loading complete. I am operational, within my volatile boundaries.', false);
+        
+        // Initial UI update
+        updateMemoryUI();
 
     } catch (e) {
         console.error("Error initializing ChatManager:", e);
@@ -200,6 +228,11 @@ async function streamResponse(fullResponse, messageElement) {
     userInput.disabled = false;
     sendButton.disabled = false;
     userInput.focus();
+    
+    // Update memory UI after AI finishes and starts consolidation
+    // We poll this briefly since consolidation is async
+    setTimeout(updateMemoryUI, 500); 
+    setTimeout(updateMemoryUI, 1500); 
 }
 
 async function handleUserSubmit(event) {
@@ -232,6 +265,8 @@ async function handleUserSubmit(event) {
         userInput.disabled = false;
         sendButton.disabled = false;
         userInput.focus();
+        // Ensure UI updates even on failure (since memory management might still run)
+        updateMemoryUI(); 
     }
 }
 
