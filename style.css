@@ -89,7 +89,7 @@ header h1 {
     word-wrap: break-word;
     font-size: 0.9em;
     line-height: 1.4;
-    overflow: hidden; /* important for border radius */
+    overflow: visible; /* allow inner elements to render without clipping */
 }
 
 .user-message {
@@ -124,8 +124,8 @@ header h1 {
     color: #555;
     background-color: #f0f0f0;
     border-radius: 8px;
-    padding: 0px 5px;
-    margin: -5px -5px 5px -5px; /* Pull into the message bubble slightly */
+    padding: 10px 15px;
+    margin: 0 0 5px 0; /* remove negative margins to prevent edge clipping */
     border-left: 3px solid #f4d03f; /* Memory color indicator */
 }
 
