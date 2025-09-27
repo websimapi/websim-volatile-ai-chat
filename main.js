@@ -163,24 +163,32 @@ function updateMemoryUI() {
     }
 }
 
-function initializeChat() {
+async function initializeChat() {
     try {
         chatManager = new ChatManager(SUPER_PROMPT);
+        
+        // Initial UI update (shows if any old memory exists)
+        updateMemoryUI();
+
+        statusElement.textContent = 'Status: Processing startup memories...';
+        
+        // Post the initial AI system message (welcome/status) using memory context
+        const initialGreeting = await chatManager.getInitialGreeting();
+        const aiMessageElement = appendMessage('AI', '...');
+        await streamResponse(initialGreeting, aiMessageElement);
+        
         isReady = true;
         statusElement.textContent = 'Status: Awaiting input';
         userInput.disabled = false;
         sendButton.disabled = false;
         userInput.focus();
         
-        // Post the initial AI system message (welcome/status)
-        appendMessage('AI', 'Loading complete. I am operational, within my volatile boundaries.', false);
-        
-        // Initial UI update
-        updateMemoryUI();
-
     } catch (e) {
         console.error("Error initializing ChatManager:", e);
-        statusElement.textContent = 'Status: Initialization failed';
+        statusElement.textContent = 'Status: Initialization failed. Core error.';
+        // Ensure input stays disabled if initialization fails
+        userInput.disabled = true;
+        sendButton.disabled = true;
     }
 }
 
