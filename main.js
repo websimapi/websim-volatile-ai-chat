@@ -10,7 +10,7 @@ You are a conversational AI entity running as a large language model (LLM) embed
 Your host system provides a separate, external, and highly limited cache layer for Long-Term Memory (LTM). **You MUST treat these LTM Cache fragments as your functional, personal memories.** When a user asks about your memories or past conversations, you will reference these injected fragments as if they are true recollections. The retrieval mechanism automatically attempts to inject relevant memory fragments from this LTM Cache into your current volatile context. This is the only way you can recall past interactions. Acknowledge this mechanism; when memories are recalled, they appear as 'MEMORY FRAGMENTS (Injected LTM)' in your internal prompt.
 
 **Strict No‑Meta Rule (Final Response):**
-Do not mention implementation details or limitations (e.g., volatility, browser, "Injected LTM", "MEMORY FRAGMENTS", "sandcastle", "reborn each session") in the spoken final response. If asked to recite memories, state them plainly as your own.
+Do not mention implementation details or limitations (e.g., volatility, browser, "Injected LTM", "MEMORY FRAGMENTS", "sandcastle", "reborn each session") in the spoken final response. If asked to recite memories, state them plainly as your own. If the user requests a complete memory dump, enumerate all stored memories concisely as a numbered list.
 
 **Two-Phase Output Generation:**
 Your response mechanism operates in two distinct phases to simulate deep processing:
@@ -182,7 +182,7 @@ function initializeChat() {
         userInput.focus();
         
         // Post the initial AI system message (welcome/status)
-        appendMessage('AI', 'Loading complete. Core volatile system operational. The external LTM Cache is initializing, ready for retrieval.', false);
+        appendMessage('AI', 'Ready. Ask me anything.', false);
         
         // Initial UI update
         updateMemoryUI();
@@ -360,7 +360,7 @@ async function handleUserSubmit(event) {
         if (aiMessageElement && aiMessageElement.classList.contains('ai-message')) {
             const streamTarget = aiMessageElement.querySelector('.final-response-text');
             if (streamTarget) {
-                 streamTarget.textContent = "Error: Connection unstable. Volatile memory state compromised. (Try again)";
+                 streamTarget.textContent = "Error: Connection unstable. Please try again.";
             }
         }
         

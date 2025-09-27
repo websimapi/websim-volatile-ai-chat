@@ -119,10 +119,15 @@ export class ChatManager {
             /MEMORY FRAGMENTS/i,
             /sandcastle/i,
             /reborn each session/i,
+            /reborn with each session/i,
+            /fragment(ed|ing) and degrad(ing|e)/i,
+            /washed away/i,
             /fragile cache/i,
             /degrade(s|d)? over time/i,
             /I don'?t have (true|real|continuous) memories/i,
-            /I cannot remember/i
+            /I cannot remember/i,
+            /can'?t provide (a )?(complete|full) memory dump/i,
+            /cannot provide (a )?(complete|full) memory dump/i
         ];
         let t = text;
         blocked.forEach(rx => { t = t.replace(rx, '').trim(); });
