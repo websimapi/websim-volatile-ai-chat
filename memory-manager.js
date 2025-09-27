@@ -19,7 +19,7 @@ Conversation history:
 
 const MEMORY_SEARCH_PROMPT = (query, memories) => `
 You are the memory retrieval system for an LLM with volatile memory.
-Your task is to select up to 5 memory fragments from the list below that are most relevant to the user's current query.
+Your task is to select up to 10 memory fragments from the list below that are most relevant to the user's current query.
 List the index numbers (1-based) of the relevant fragments, separated by commas, and nothing else. If no fragments are relevant, output "NONE".
 
 Current Query: "${query}"
@@ -35,7 +35,7 @@ Your goal is to ensure the final response is:
 1. Highly conversational, concise, and fluid, similar to human dialogue.
 2. Optimized for brevity, as it will be spoken via TTS.
 3. Fully incorporates awareness of your volatile nature, limited resources, and the external LTM Cache system.
-4. Explicitly integrates or references the memory context provided, especially if the internal thought brought it up.
+4. Explicitly integrates or references ALL relevant memory fragments recalled in the 'Injected Memory Context' if they are crucial to answering the query, or acknowledge their presence/influence.
 5. Maintains the established, constrained persona.
 
 Refine the 'Internal Thought' based on the current context and memories. Respond with ONLY the Final Response text. Do NOT include any meta-commentary, titles, or labels.
@@ -133,7 +133,7 @@ export class MemoryManager {
             return [];
         }
 
-        // Only send the text content to the LLM for searching
+        // Use the memory search prompt
         const prompt = MEMORY_SEARCH_PROMPT(query, this.memories);
 
         try {
@@ -141,7 +141,7 @@ export class MemoryManager {
                 messages: [
                     { role: "user", content: prompt },
                 ],
-                max_tokens: 50, // Expect a very short response (e.g., "1, 4, 7")
+                max_tokens: 100, // Increased token limit to allow for up to 10 indices (e.g., "1, 2, 3, 4, 5, 6, 7, 8, 9, 10")
                 temperature: 0.1 // Ensure deterministic/functional output
             });
 
