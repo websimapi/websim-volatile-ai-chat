@@ -35,7 +35,7 @@ Your goal is to ensure the final response is:
 1. Highly conversational, concise, and fluid, similar to human dialogue.
 2. Optimized for brevity, as it will be spoken via TTS. **DO NOT be verbose. Get straight to the point.**
 3. While maintaining the persona, **STRICTLY MINIMIZE OR OMIT discussions of your volatile nature, memory constraints, or browser embodiment** unless the user is specifically asking about your system's operational status or limitations. Focus on answering the user's question directly and conversationally.
-4. Explicitly integrates or references ALL relevant memory fragments recalled in the 'Injected Memory Context' if they are crucial to answering the query, or acknowledge their presence/influence.
+4. Explicitly integrates or references ALL relevant memory fragments recalled in the 'Injected Memory Context' if they are crucial to answering the query, or acknowledge their presence/influence. **When listing memories, simply state them naturally without the surrounding tags like "[Recalled]" or the LTM block headers, making them sound like conversational recollections.**
 5. Maintains the established, constrained persona subtlely, focusing on natural dialogue.
 
 Refine the 'Internal Thought' based on the current context and memories. Respond with ONLY the Final Response text. Do NOT include any meta-commentary, titles, or labels.
@@ -94,6 +94,14 @@ export class MemoryManager {
     }
 
     /**
+     * Retrieves all memories.
+     * @returns {Array} List of memory fragments.
+     */
+    getAllMemories() {
+        return this.memories;
+    }
+
+    /**
      * Retrieves the top relevant/recent memories to be injected into the LLM context.
      * @param {string} currentPrompt - The user's latest input.
      * @returns {string} Context block of memory fragments.
@@ -103,23 +111,37 @@ export class MemoryManager {
             return '';
         }
         
-        // Use LLM to find the most relevant memories
-        const relevantMemories = await this._searchRelevantMemories(currentPrompt);
-        
-        let context = '';
-        if (relevantMemories.length > 0) {
-            context = '--- MEMORY FRAGMENTS (Injected LTM) ---\n';
-            relevantMemories.forEach(mem => {
-                context += `- [Recalled] ${mem.text}\n`;
-                // Increment recall count and save, but don't save every time as this is performance heavy. 
-                // We'll trust the periodic degradation/save cycle to handle this, 
-                // or ensure we save after the compact/store phase.
-                mem.recall_count = (mem.recall_count || 0) + 1; 
-            });
-            context += '----------------------------------------\n';
-            // Note: We don't save here; we rely on the main ChatManager call to handle saving 
-            // after the entire process is done (in compactAndStoreMemory).
+        const lowerPrompt = currentPrompt.toLowerCase();
+        const reciteAll = lowerPrompt.includes('all your memories') || lowerPrompt.includes('all your memory');
+
+        let fragmentsToInject;
+
+        if (reciteAll) {
+            // If the user asks for all memories, inject all of them.
+            // Sort by most recent first for better conversational flow
+            fragmentsToInject = [...this.memories].sort((a, b) => b.timestamp - a.timestamp);
+        } else {
+            // Use LLM to find the most relevant memories for normal conversation
+            fragmentsToInject = await this._searchRelevantMemories(currentPrompt);
         }
+        
+        if (fragmentsToInject.length === 0) {
+            return '';
+        }
+
+        let context = '';
+        context = '--- MEMORY FRAGMENTS (Injected LTM) ---\n';
+        fragmentsToInject.forEach(mem => {
+            context += `- [Recalled] ${mem.text}\n`;
+            // Increment recall count only if it was a search, not a full dump
+            if (!reciteAll) {
+                mem.recall_count = (mem.recall_count || 0) + 1; 
+            }
+        });
+        context += '----------------------------------------\n';
+        
+        // Note: We don't save here; we rely on the main ChatManager call to handle saving 
+        // after the entire process is done (in compactAndStoreMemory).
         return context;
     }
     
